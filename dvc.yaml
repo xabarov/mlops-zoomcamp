@@ -1,0 +1,73 @@
+stages:
+  feature_engineering:
+    cmd: python3 featurize.py --dataset_path ${dataset.path} --duration_minutes_min ${feature_engineering.duration_minutes.min} --duration_minutes_max ${feature_engineering.duration_minutes.max} --features_path ${dataset.features_path} --save_path ${feature_engineering.save_path}
+    params:
+      - dataset.path
+      - feature_engineering.duration_minutes.min
+      - feature_engineering.duration_minutes.max
+      - dataset.features_path
+      - feature_engineering.save_path
+    deps:
+      - featurize.py
+      - ${dataset.features_path}
+      - ${dataset.path}
+    outs:
+      - ${feature_engineering.save_path}
+
+  split_data:
+    cmd: python3 split.py --val_portion ${split.val_portion} --test_portion ${split.test_portion} --save_path ${split.save_path}
+    params:
+      - split.val_portion
+      - split.test_portion
+      - split.save_path
+    deps:
+      - split.py
+      - ${feature_engineering.save_path}
+    outs:
+     - ${split.save_path}/train.parquet
+     - ${split.save_path}/val.parquet
+     - ${split.save_path}/test.parquet
+
+  transform_data:
+    cmd: python3 transform.py --features_path ${dataset.features_path}  --save_path ${transform.save_path}
+    params:
+      - dataset.features_path
+      - transform.save_path
+    deps:
+      - transform.py
+      - ${dataset.features_path}
+      - ${split.save_path}/train.parquet
+      - ${split.save_path}/val.parquet
+      - ${split.save_path}/test.parquet
+    outs:
+      - ${transform.save_path}
+
+  search_best_params:
+    cmd: python3 search_best_params.py --search_space_params_path ${search_best_params.params_path} --xgb_matrices_path ${transform.save_path} --num_boost_round ${train.num_boost_round} --early_stopping_rounds ${train.early_stopping_rounds} --save_path ${search_best_params.save_path}
+    params:
+      - search_best_params.params_path
+      - transform.save_path
+      - train.num_boost_round
+      - train.early_stopping_rounds
+      - search_best_params.save_path
+    deps:
+      - search_best_params.py
+      - ${search_best_params.params_path}
+      - ${transform.save_path}
+    outs:
+      - ${search_best_params.save_path}
+
+  train:
+    cmd: python3 train.py --best_params_path ${search_best_params.save_path} --xgb_matrices_path ${transform.save_path} --num_boost_round ${train.num_boost_round} --early_stopping_rounds ${train.early_stopping_rounds} --features_path ${dataset.features_path} --save_model_path ${train.save_model_path}
+    params:
+      - search_best_params.save_path
+      - transform.save_path
+      - train.num_boost_round
+      - train.early_stopping_rounds
+      - dataset.features_path
+      - train.save_model_path
+    deps:
+      - train.py
+      - ${search_best_params.save_path}
+      - ${dataset.features_path}
+      - ${transform.save_path}

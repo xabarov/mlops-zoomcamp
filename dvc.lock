@@ -1,0 +1,159 @@
+schema: '2.0'
+stages:
+  feature_engineering:
+    cmd: python3 featurize.py --dataset_path 
+      data/yellow_tripdata_2025-01_sample.parquet --duration_minutes_min 1 
+      --duration_minutes_max 60 --features_path features.yaml --save_path 
+      nyc/processed/yellow_tripdata_processed.parquet
+    deps:
+    - path: data/yellow_tripdata_2025-01_sample.parquet
+      hash: md5
+      md5: d8795d6df54f725ce73739f49413573e
+      size: 10120209
+    - path: features.yaml
+      hash: md5
+      md5: 2bccff1d49b45fdc739c3091d42390eb
+      size: 174
+    - path: featurize.py
+      hash: md5
+      md5: fa8771648df7228a87ab1c76e6695c42
+      size: 2930
+    params:
+      params.yaml:
+        dataset.features_path: features.yaml
+        dataset.path: data/yellow_tripdata_2025-01_sample.parquet
+        feature_engineering.duration_minutes.max: 60
+        feature_engineering.duration_minutes.min: 1
+        feature_engineering.save_path: 
+          nyc/processed/yellow_tripdata_processed.parquet
+    outs:
+    - path: nyc/processed/yellow_tripdata_processed.parquet
+      hash: md5
+      md5: a2058a21e843ba17b5ce4e176878b721
+      size: 2855983
+  split_data:
+    cmd: python3 split.py --val_portion 0.1 --test_portion 0.1 --save_path 
+      nyc/split
+    deps:
+    - path: nyc/processed/yellow_tripdata_processed.parquet
+      hash: md5
+      md5: a2058a21e843ba17b5ce4e176878b721
+      size: 2855983
+    - path: split.py
+      hash: md5
+      md5: 39576be93289a6c49449ba0fe5515920
+      size: 1625
+    params:
+      params.yaml:
+        split.save_path: nyc/split
+        split.test_portion: 0.1
+        split.val_portion: 0.1
+    outs:
+    - path: nyc/split/test.parquet
+      hash: md5
+      md5: bf7b488eb788b374eec1ed3725b514e1
+      size: 75615
+    - path: nyc/split/train.parquet
+      hash: md5
+      md5: b15983ce7ea54ae9fd6e583d9c17c1c4
+      size: 2346263
+    - path: nyc/split/val.parquet
+      hash: md5
+      md5: 7eda021234d8bc2563ecd9d8327914e9
+      size: 583836
+  transform_data:
+    cmd: python3 transform.py --features_path features.yaml  --save_path 
+      nyc/xgb_matrices
+    deps:
+    - path: features.yaml
+      hash: md5
+      md5: 2bccff1d49b45fdc739c3091d42390eb
+      size: 174
+    - path: nyc/split/test.parquet
+      hash: md5
+      md5: bf7b488eb788b374eec1ed3725b514e1
+      size: 75615
+    - path: nyc/split/train.parquet
+      hash: md5
+      md5: b15983ce7ea54ae9fd6e583d9c17c1c4
+      size: 2346263
+    - path: nyc/split/val.parquet
+      hash: md5
+      md5: 7eda021234d8bc2563ecd9d8327914e9
+      size: 583836
+    - path: transform.py
+      hash: md5
+      md5: ac74caa960173d2347032310550dedb7
+      size: 2725
+    params:
+      params.yaml:
+        dataset.features_path: features.yaml
+        transform.save_path: nyc/xgb_matrices
+    outs:
+    - path: nyc/xgb_matrices
+      hash: md5
+      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      size: 75590688
+      nfiles: 6
+  search_best_params:
+    cmd: python3 search_best_params.py --search_space_params_path 
+      search_space_params.yaml --xgb_matrices_path nyc/xgb_matrices 
+      --num_boost_round 100 --early_stopping_rounds 20 --save_path 
+      nyc/best_train_params.yaml
+    deps:
+    - path: nyc/xgb_matrices
+      hash: md5
+      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      size: 75590688
+      nfiles: 6
+    - path: search_best_params.py
+      hash: md5
+      md5: bf0407b475e2fa7629868877f18e5958
+      size: 5052
+    - path: search_space_params.yaml
+      hash: md5
+      md5: a094d48f8831aecc19fb8d0cd32a7dfc
+      size: 426
+    params:
+      params.yaml:
+        search_best_params.params_path: search_space_params.yaml
+        search_best_params.save_path: nyc/best_train_params.yaml
+        train.early_stopping_rounds: 20
+        train.num_boost_round: 100
+        transform.save_path: nyc/xgb_matrices
+    outs:
+    - path: nyc/best_train_params.yaml
+      hash: md5
+      md5: 54eb927cb26b75d4da21b57f1ed463d7
+      size: 149
+  train:
+    cmd: python3 train.py --best_params_path nyc/best_train_params.yaml 
+      --xgb_matrices_path nyc/xgb_matrices --num_boost_round 100 
+      --early_stopping_rounds 20 --features_path features.yaml --save_model_path
+      nyc/models/model.json
+    deps:
+    - path: features.yaml
+      hash: md5
+      md5: 2bccff1d49b45fdc739c3091d42390eb
+      size: 174
+    - path: nyc/best_train_params.yaml
+      hash: md5
+      md5: 54eb927cb26b75d4da21b57f1ed463d7
+      size: 149
+    - path: nyc/xgb_matrices
+      hash: md5
+      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      size: 75590688
+      nfiles: 6
+    - path: train.py
+      hash: md5
+      md5: 89bd80c5fa6bf7faa7608cbb26931dc3
+      size: 5763
+    params:
+      params.yaml:
+        dataset.features_path: features.yaml
+        search_best_params.save_path: nyc/best_train_params.yaml
+        train.early_stopping_rounds: 20
+        train.num_boost_round: 100
+        train.save_model_path: nyc/models/model.json
+        transform.save_path: nyc/xgb_matrices

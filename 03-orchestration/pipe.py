@@ -28,12 +28,14 @@ def read_dataframe(year, month):
     Reads the NYC taxi dataset from a parquet
     """
 
-    if not os.path.exists(f"yellow_tripdata_{year}-{month}.parquet"):
+    if not os.path.exists(f"data/yellow_tripdata_{year}-{month}.parquet"):
         url = f'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year}-{month}.parquet'
+        df = pd.read_parquet(url)
+        # save locally
+        df.to_parquet(f'data/yellow_tripdata_{year}-{month}.parquet')
     else:
-        url = f'yellow_tripdata_{year}-{month}.parquet'
-
-    df = pd.read_parquet(url)
+        url = f'data/yellow_tripdata_{year}-{month}.parquet'
+        df = pd.read_parquet(url)
 
     return df
 
@@ -65,6 +67,9 @@ def feature_engineering(df):
 
 
 def split_data(df):
+    """
+    Split the data into training, validation and test sets
+    """
 
     df_train, df_val, df_test = np.split(df.sample(frac=1, random_state=42), [
                                          int(.8*len(df)), int(.9*len(df))])
@@ -73,6 +78,9 @@ def split_data(df):
 
 
 def create_pipe(categorical, numerical):
+    """
+    Create a machine learning pipeline for the yellow taxi dataset
+    """
 
     ohe = OneHotEncoder(handle_unknown='ignore')
 
@@ -89,6 +97,9 @@ def create_pipe(categorical, numerical):
 
 
 def transform_data(df_train, df_val, df_test, full_pipeline, categorical, numerical):
+    """
+    Transform the data using a machine learning pipeline
+    """
 
     # transform the training and validation data using the full pipeline
     X_train = full_pipeline.fit_transform(df_train[categorical + numerical])
@@ -159,7 +170,7 @@ def search_best_params(search_space):
 def comprehensive_feature_importance_analysis(model):
     """Analyze and log comprehensive feature importance."""
 
-    importance_types = ["weight", "gain", "cover", "total_gain"]
+    importance_types = ["weight", "gain"]
 
     for imp_type in importance_types:
         # Get importance scores
@@ -196,6 +207,9 @@ def comprehensive_feature_importance_analysis(model):
 
 
 def train_best_model(best_params):
+    """
+    Train the best model using the provided parameters and log metrics to MLflow.
+    """
 
     mlflow.end_run()
 
@@ -204,9 +218,9 @@ def train_best_model(best_params):
         mlflow.log_params(best_params)
 
         booster = xgb.train(best_params, dtrain=train,
-                            num_boost_round=1000,
+                            num_boost_round=NUM_BOOST_ROUND,
                             evals=[(valid, 'validation')],
-                            early_stopping_rounds=50
+                            early_stopping_rounds=EARLY_STOPPING_ROUNDS
                             )
 
         y_pred = booster.predict(valid)
@@ -215,6 +229,10 @@ def train_best_model(best_params):
 
         mlflow.log_param('categorical_features', CATEGORICAL)
         mlflow.log_param('numerical_features', NUMERICAL)
+        mlflow.log_param('yellow_taxi_dataset_year', YEAR)
+        mlflow.log_param('yellow_taxi_dataset_month', MONTH)
+        mlflow.log_param('num_boost_round', NUM_BOOST_ROUND)
+        mlflow.log_param('early_stopping_rounds', EARLY_STOPPING_ROUNDS)
 
         comprehensive_feature_importance_analysis(booster)
 
@@ -225,13 +243,14 @@ def train_best_model(best_params):
 
         mlflow.log_artifact('models/preprocessor.b',
                             artifact_path="preprocessor")
+
         mlflow.xgboost.log_model(booster, artifact_path="model")
 
 
 if __name__ == "__main__":
 
     YEAR = 2025
-    MONTH = '01'
+    MONTH = '02'
 
     CATEGORICAL = ['day_of_week', 'hour_of_day']
     NUMERICAL = ['trip_distance', 'congestion_surcharge']
@@ -255,6 +274,9 @@ if __name__ == "__main__":
         'reg_lambda': 0.11861308163,
         'seed': 42,
     }
+
+    NUM_BOOST_ROUND = 300
+    EARLY_STOPPING_ROUNDS = 50
 
     df = read_dataframe(year=YEAR, month=MONTH)
     df = feature_engineering(df)

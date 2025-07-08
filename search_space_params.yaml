@@ -1,0 +1,29 @@
+max_depth:
+  type: int
+  distribution: quniform
+  low: 4
+  high: 50
+  q: 1
+learning_rate:
+  type: float
+  distribution: loguniform
+  low: -3
+  high: -1
+reg_alpha:
+  type: float
+  distribution: loguniform
+  low: -5
+  high: -2.5
+reg_lambda:
+  type: float
+  distribution: loguniform
+  low: -6
+  high: -2.5
+min_child_weight:
+  type: float
+  distribution: loguniform
+  low: -1
+  high: 4
+objective: reg:linear
+seed: 42
+max_evals: 10

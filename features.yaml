@@ -1,0 +1,9 @@
+features:
+    categorical: 
+     - day_of_week
+     - hour_of_day
+    numerical: 
+     - trip_distance
+     - congestion_surcharge
+     - passenger_count
+    target: duration

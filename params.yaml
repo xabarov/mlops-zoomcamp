@@ -1,0 +1,31 @@
+dataset:
+  year: '2025'
+  month: '02'
+  features_path: features.yaml
+  path: data/yellow_tripdata_2025-01_sample.parquet
+
+feature_engineering:
+  duration_minutes:
+    min: 1
+    max: 60
+  save_path: nyc/processed/yellow_tripdata_processed.parquet
+
+split:
+  val_portion: 0.1
+  test_portion: 0.1
+  save_path: nyc/split
+
+transform:
+  save_path: nyc/xgb_matrices
+
+search_best_params:
+  params_path: search_space_params.yaml
+  save_path: nyc/best_train_params.yaml
+
+train:
+  features_path: features.yaml
+  xgb_matrices_path: nyc/xgb_matrices
+  num_boost_round: 100
+  early_stopping_rounds: 20
+  save_model_path: nyc/models/model.json
+  
