@@ -207,10 +207,10 @@ marimo/_lsp/
 __marimo__/
 
 data/
-nyc/
+./nyc/
 mlflow.db
 mlruns/
 mlartifacts/
-.dvc/
+./.dvc/
 
 
