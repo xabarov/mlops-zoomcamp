@@ -2,7 +2,7 @@ dataset:
   year: '2025'
   month: '02'
   features_path: features.yaml
-  path: data/yellow_tripdata_2025-01_sample.parquet
+  path: data/yellow_tripdata_2025-01.parquet
 
 feature_engineering:
   duration_minutes:
