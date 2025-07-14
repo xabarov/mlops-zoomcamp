@@ -1,4 +1,6 @@
-
+"""
+Configuration for the web service.
+"""
 
 RUN_ID = "4bb404017aa548e992a15a6c65276aa0"
 

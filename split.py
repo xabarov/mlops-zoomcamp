@@ -1,6 +1,7 @@
 """
 Split the data into training, validation and test sets
 """
+
 import os
 
 import numpy as np
@@ -17,10 +18,13 @@ def split(val_portion: float = 0.1, test_portion: float = 0.1, save_path: str = 
     if not os.path.exists("nyc/split"):
         os.makedirs("nyc/split")
 
-    df_train, df_val_and_test = np.split(df.sample(frac=1, random_state=42), [
-                                         int((1 - val_portion - test_portion) * len(df))])
-    df_val, df_test = np.split(df_val_and_test.sample(frac=1, random_state=42), [
-                               int((1 - test_portion) * len(df_val_and_test))])
+    df_train, df_val_and_test = np.split(
+        df.sample(frac=1, random_state=42), [int((1 - val_portion - test_portion) * len(df))]
+    )
+    df_val, df_test = np.split(
+        df_val_and_test.sample(frac=1, random_state=42),
+        [int((1 - test_portion) * len(df_val_and_test))],
+    )
 
     # save in split folder all df
     df_train.to_parquet(f'{save_path}/train.parquet')
@@ -34,11 +38,14 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Split the dataset into train, validation and test sets.')
-    parser.add_argument('--val_portion', type=float, default=0.1,
-                        help='Portion of the data to use for validation')
-    parser.add_argument('--test_portion', type=float, default=0.1,
-                        help='Portion of the data to use for test')
+        description='Split the dataset into train, validation and test sets.'
+    )
+    parser.add_argument(
+        '--val_portion', type=float, default=0.1, help='Portion of the data to use for validation'
+    )
+    parser.add_argument(
+        '--test_portion', type=float, default=0.1, help='Portion of the data to use for test'
+    )
     parser.add_argument('--save_path', type=str, default='nyc/split')
 
     args = parser.parse_args()

@@ -1,6 +1,7 @@
 """
 Train an XGBoost model on the NYC taxi
 """
+
 import json
 import os
 
@@ -25,9 +26,7 @@ def comprehensive_feature_importance_analysis(model):
     importance = model.get_score(importance_type='weight')
 
     # Sort features by importance
-    sorted_features = sorted(
-        importance.items(), key=lambda x: x[1], reverse=True
-    )
+    sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
 
     # Create visualization
     features, scores = zip(*sorted_features[:10])
@@ -51,20 +50,21 @@ def comprehensive_feature_importance_analysis(model):
     mlflow.log_artifact(json_filename)
 
 
-def train_best_model(best_params: dict, xgb_matrices_path: str,
-                     num_boost_round: int = 300,
-                     early_stopping_rounds: int = 30,
-                     features_path: str = 'features.yaml', 
-                     save_model_path: str = 'nyc/models/booster.json'):
+def train_best_model(
+    best_params: dict,
+    xgb_matrices_path: str,
+    num_boost_round: int = 300,
+    early_stopping_rounds: int = 30,
+    features_path: str = 'features.yaml',
+    save_model_path: str = 'nyc/models/booster.json',
+):
     """
     Train the best model using the provided parameters and log metrics to MLflow.
     """
 
     # load X_train, X_val, X_test, y_train, y_val, y_test
-    X_train = np.load(os.path.join(xgb_matrices_path,
-                      'x_train.npy'), allow_pickle=True)
-    X_val = np.load(os.path.join(xgb_matrices_path,
-                    'x_val.npy'), allow_pickle=True)
+    X_train = np.load(os.path.join(xgb_matrices_path, 'x_train.npy'), allow_pickle=True)
+    X_val = np.load(os.path.join(xgb_matrices_path, 'x_val.npy'), allow_pickle=True)
     y_train = np.load(os.path.join(xgb_matrices_path, 'y_train.npy'))
     y_val = np.load(os.path.join(xgb_matrices_path, 'y_val.npy'))
 
@@ -92,11 +92,13 @@ def train_best_model(best_params: dict, xgb_matrices_path: str,
 
         mlflow.log_params(best_params)
 
-        booster = xgb.train(best_params, dtrain=train,
-                            num_boost_round=num_boost_round,
-                            evals=[(valid, 'validation')],
-                            early_stopping_rounds=early_stopping_rounds
-                            )
+        booster = xgb.train(
+            best_params,
+            dtrain=train,
+            num_boost_round=num_boost_round,
+            evals=[(valid, 'validation')],
+            early_stopping_rounds=early_stopping_rounds,
+        )
 
         y_pred = booster.predict(valid)
 
@@ -117,14 +119,17 @@ def train_best_model(best_params: dict, xgb_matrices_path: str,
 
         mlflow.log_param('model', 'XGBoost')
 
-        mlflow.log_artifact('nyc/models/preprocessor.b',
-                            artifact_path="preprocessor")
+        mlflow.log_artifact('nyc/models/preprocessor.b', artifact_path="preprocessor")
 
         signature = infer_signature(train.get_data(), y_pred)
 
-        mlflow.xgboost.log_model(booster, artifact_path="model",     signature=signature,
-                                 input_example=X_train[:5],
-                                 registered_model_name="xgboost_model")
+        mlflow.xgboost.log_model(
+            booster,
+            artifact_path="model",
+            signature=signature,
+            input_example=X_train[:5],
+            registered_model_name="xgboost_model",
+        )
 
         # save model to nyc/models path
         booster.save_model(save_model_path)
@@ -137,27 +142,44 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Train an XGBoost model.')
 
-    parser.add_argument('--best_params_path', type=str,
-                        required=True, help='Path to the best parameters file')
-    parser.add_argument('--xgb_matrices_path', type=str,
-                        default='nyc/xgb_matrices', help='Path to the XGBoost matrices')
-    parser.add_argument('--num_boost_round', type=int,
-                        default=300, help='Number of boosting rounds')
-    parser.add_argument('--early_stopping_rounds', type=int,
-                        default=10, help='Early stopping rounds')
+    parser.add_argument(
+        '--best_params_path', type=str, required=True, help='Path to the best parameters file'
+    )
+    parser.add_argument(
+        '--xgb_matrices_path',
+        type=str,
+        default='nyc/xgb_matrices',
+        help='Path to the XGBoost matrices',
+    )
+    parser.add_argument(
+        '--num_boost_round', type=int, default=300, help='Number of boosting rounds'
+    )
+    parser.add_argument(
+        '--early_stopping_rounds', type=int, default=10, help='Early stopping rounds'
+    )
 
-    parser.add_argument('--features_path', type=str,
-                        default='features.yaml', help='Path to the features file')
+    parser.add_argument(
+        '--features_path', type=str, default='features.yaml', help='Path to the features file'
+    )
 
-    parser.add_argument('--save_model_path', type=str,
-                        default='nyc/models/model.json', help='Path to save the model')
+    parser.add_argument(
+        '--save_model_path',
+        type=str,
+        default='nyc/models/model.json',
+        help='Path to save the model',
+    )
 
     args = parser.parse_args()
 
     # load best params
     with open(args.best_params_path, 'r', encoding='utf-8') as file:
-        best_params = yaml.safe_load(file)
+        best_params_dict = yaml.safe_load(file)
 
-    train_best_model(best_params, args.xgb_matrices_path,
-                     int(args.num_boost_round), int(args.early_stopping_rounds),
-                     args.features_path, save_model_path=args.save_model_path)
+    train_best_model(
+        best_params_dict,
+        args.xgb_matrices_path,
+        int(args.num_boost_round),
+        int(args.early_stopping_rounds),
+        args.features_path,
+        save_model_path=args.save_model_path,
+    )

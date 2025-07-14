@@ -1,3 +1,7 @@
+"""
+Pipeline for data transformation and model training
+"""
+
 import json
 import os
 import pickle
@@ -29,7 +33,10 @@ def read_dataframe(year, month):
     """
 
     if not os.path.exists(f"data/yellow_tripdata_{year}-{month}.parquet"):
-        url = f'https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_{year}-{month}.parquet'
+        url = (
+            f'https://d37ci6vzurychx.cloudfront.net/trip-data/'
+            f'yellow_tripdata_{year}-{month}.parquet'
+        )
         df = pd.read_parquet(url)
         # save locally
         df.to_parquet(f'data/yellow_tripdata_{year}-{month}.parquet')
@@ -71,8 +78,9 @@ def split_data(df):
     Split the data into training, validation and test sets
     """
 
-    df_train, df_val, df_test = np.split(df.sample(frac=1, random_state=42), [
-                                         int(.8*len(df)), int(.9*len(df))])
+    df_train, df_val, df_test = np.split(
+        df.sample(frac=1, random_state=42), [int(0.8 * len(df)), int(0.9 * len(df))]
+    )  # pylint: disable=unbalanced-tuple-unpacking
 
     return df_train, df_val, df_test
 
@@ -90,7 +98,7 @@ def create_pipe(categorical, numerical):
             ('scaler', StandardScaler(), numerical),
         ],
         verbose_feature_names_out=False,  # Ensure short feature names
-        n_jobs=-1
+        n_jobs=-1,
     )
 
     return full_pipeline
@@ -115,6 +123,9 @@ def transform_data(df_train, df_val, df_test, full_pipeline, categorical, numeri
 
 
 def create_dmatrix(X_train, X_val, X_test, y_train, y_val, y_test):
+    """
+    Create DMatrix objects for XGBoost
+    """
 
     train = xgb.DMatrix(X_train, label=y_train, feature_names=feature_names)
     valid = xgb.DMatrix(X_val, label=y_val, feature_names=feature_names)
@@ -139,13 +150,13 @@ def objective(params):
 
         booster = xgb.train(
             params=params,
-            dtrain=train,
+            dtrain=train_taxi,
             num_boost_round=1000,
-            evals=[(valid, 'validation')],
-            early_stopping_rounds=50
+            evals=[(valid_taxi, 'validation')],
+            early_stopping_rounds=50,
         )
-        y_pred = booster.predict(valid)
-        rmse = root_mean_squared_error(y_val, y_pred)
+        y_pred = booster.predict(valid_taxi)
+        rmse = root_mean_squared_error(y_val_taxi, y_pred)
         mlflow.log_metric("rmse", rmse)
 
     return {'loss': rmse, 'status': STATUS_OK}
@@ -157,11 +168,7 @@ def search_best_params(search_space):
     """
 
     best_result = fmin(
-        fn=objective,
-        space=search_space,
-        algo=tpe.suggest,
-        max_evals=3,
-        trials=Trials()
+        fn=objective, space=search_space, algo=tpe.suggest, max_evals=3, trials=Trials()
     )
 
     return best_result
@@ -180,9 +187,7 @@ def comprehensive_feature_importance_analysis(model):
             continue
 
         # Sort features by importance
-        sorted_features = sorted(
-            importance.items(), key=lambda x: x[1], reverse=True
-        )
+        sorted_features = sorted(importance.items(), key=lambda x: x[1], reverse=True)
 
         # Create visualization
         features, scores = zip(*sorted_features[:10])
@@ -217,14 +222,16 @@ def train_best_model(best_params):
 
         mlflow.log_params(best_params)
 
-        booster = xgb.train(best_params, dtrain=train,
-                            num_boost_round=NUM_BOOST_ROUND,
-                            evals=[(valid, 'validation')],
-                            early_stopping_rounds=EARLY_STOPPING_ROUNDS
-                            )
+        booster = xgb.train(
+            best_params,
+            dtrain=train_taxi,
+            num_boost_round=NUM_BOOST_ROUND,
+            evals=[(valid_taxi, 'validation')],
+            early_stopping_rounds=EARLY_STOPPING_ROUNDS,
+        )
 
-        y_pred = booster.predict(valid)
-        rmse = root_mean_squared_error(y_val, y_pred)
+        y_pred = booster.predict(valid_taxi)
+        rmse = root_mean_squared_error(y_val_taxi, y_pred)
         mlflow.log_metric("rmse", rmse)
 
         mlflow.log_param('categorical_features', CATEGORICAL)
@@ -239,10 +246,9 @@ def train_best_model(best_params):
         mlflow.log_param('model', 'XGBoost')
 
         with open('models/preprocessor.b', 'wb') as f_out:
-            pickle.dump(pipe, f_out)
+            pickle.dump(pipe_taxi, f_out)
 
-        mlflow.log_artifact('models/preprocessor.b',
-                            artifact_path="preprocessor")
+        mlflow.log_artifact('models/preprocessor.b', artifact_path="preprocessor")
 
         mlflow.xgboost.log_model(booster, artifact_path="model")
 
@@ -262,7 +268,7 @@ if __name__ == "__main__":
         'reg_lambda': hp.loguniform('reg_lambda', -6, -1),
         'min_child_weight': hp.loguniform('min_child_weight', -1, 3),
         'objective': 'reg:linear',
-        'seed': 42
+        'seed': 42,
     }
 
     BEST_PARAMS = {
@@ -278,20 +284,22 @@ if __name__ == "__main__":
     NUM_BOOST_ROUND = 300
     EARLY_STOPPING_ROUNDS = 50
 
-    df = read_dataframe(year=YEAR, month=MONTH)
-    df = feature_engineering(df)
+    df_taxi = read_dataframe(year=YEAR, month=MONTH)
+    df_taxi = feature_engineering(df_taxi)
 
-    df_train, df_val, df_test = split_data(df)
+    df_train_taxi, df_val_taxi, df_test_taxi = split_data(df_taxi)
 
-    pipe = create_pipe(CATEGORICAL, NUMERICAL)
+    pipe_taxi = create_pipe(CATEGORICAL, NUMERICAL)
 
-    X_train, X_val, X_test, y_train, y_val, y_test = transform_data(
-        df_train, df_val, df_test, pipe, CATEGORICAL, NUMERICAL)
+    X_train_taxi, X_val_taxi, X_test_taxi, y_train_taxi, y_val_taxi, y_test_taxi = transform_data(
+        df_train_taxi, df_val_taxi, df_test_taxi, pipe_taxi, CATEGORICAL, NUMERICAL
+    )
 
-    feature_names = list(pipe.get_feature_names_out())
+    feature_names = list(pipe_taxi.get_feature_names_out())
 
-    train, valid, test = create_dmatrix(
-        X_train, X_val, X_test, y_train, y_val, y_test)
+    train_taxi, valid_taxi, tes_taxi = create_dmatrix(
+        X_train_taxi, X_val_taxi, X_test_taxi, y_train_taxi, y_val_taxi, y_test_taxi
+    )
 
     # best_params = search_best_params(SEARCH_SPACE)
 

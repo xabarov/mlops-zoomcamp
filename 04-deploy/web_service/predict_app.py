@@ -1,6 +1,7 @@
 """
 Predict taxi fares using a trained XGBoost model
 """
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -8,8 +9,13 @@ import uvicorn
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from loaders import load_model, load_preprocessor
-from models import (BatchPredictionResponse, BatchRideData, HealthResponse,
-                    PredictionResponse, RideData)
+from models import (
+    BatchPredictionResponse,
+    BatchRideData,
+    HealthResponse,
+    PredictionResponse,
+    RideData,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,7 +25,7 @@ ml_models = {}
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_fastapi_app: FastAPI):
     """
     Load the ML model and preprocessor once and cache
     """
@@ -38,7 +44,7 @@ app = FastAPI(
     title="NYC Taxi Duration Prediction API",
     description="API for predicting NYC taxi ride durations",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -66,9 +72,8 @@ async def predict_duration(ride_data: RideData) -> PredictionResponse:
         return PredictionResponse(predicted_duration=float(prediction[0]))
 
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Prediction failed: {str(e)}")
+        logger.error("Prediction error: %s", e)
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}") from e
 
 
 @app.post("/predict/batch", summary="Predict multiple ride durations")
@@ -93,9 +98,8 @@ async def predict_batch(batch_data: BatchRideData) -> BatchPredictionResponse:
         return BatchPredictionResponse(predictions=[float(pred) for pred in predictions])
 
     except Exception as e:
-        logger.error(f"Batch prediction error: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"Batch prediction failed: {str(e)}")
+        logger.error("Batch prediction error %s", e)
+        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}") from e
 
 
 @app.get("/health", summary="Health check endpoint")
@@ -107,18 +111,13 @@ async def health_check() -> HealthResponse:
             hour_of_day="12",
             trip_distance=3.0,
             congestion_surcharge=1.0,
-            passenger_count=1
+            passenger_count=1,
         )
         await predict_duration(test_ride)
         return HealthResponse(status="healthy", models_loaded=True)
     except Exception as e:
         return HealthResponse(status="unhealthy", models_loaded=False, error=str(e))
 
+
 if __name__ == "__main__":
-    uvicorn.run(
-        "predict_app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("predict_app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

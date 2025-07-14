@@ -1,3 +1,7 @@
+"""
+Load models for prediction.
+"""
+
 import logging
 import os
 import pickle
@@ -6,7 +10,8 @@ from functools import lru_cache
 import mlflow
 import mlflow.artifacts
 import mlflow.xgboost
-from config import RUN_ID, TRACKING_URI, EXPERIMENT_NAME
+from config import EXPERIMENT_NAME, RUN_ID, TRACKING_URI
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,7 +31,7 @@ def load_model():
 
     model_uri = f"models:/{model_name}/{model_version}"
     model = mlflow.xgboost.load_model(model_uri)
-    logger.info(f"Model loaded successfully from {model_uri}")
+    logger.info("Model loaded successfully from %s", model_uri)
 
     return model
 
@@ -42,8 +47,7 @@ def load_preprocessor():
 
     # Download only if not exists
     mlflow.artifacts.download_artifacts(
-        artifact_uri=f'mlflow-artifacts:/1/{RUN_ID}/artifacts/preprocessor',
-        dst_path=cur_dir
+        artifact_uri=f'mlflow-artifacts:/1/{RUN_ID}/artifacts/preprocessor', dst_path=cur_dir
     )
 
     with open(preprocessor_path, 'rb') as f:

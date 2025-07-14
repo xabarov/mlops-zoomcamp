@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pylint.messages_control]
+disable = ["invalid-name",
+          "too-many-positional-arguments",
+          "too-many-instance-attributes",
+          "too-few-public-methods",
+          "duplicate-code",
+          "too-many-locals",
+          "too-many-branches",
+          "too-many-statements",
+          "too-many-arguments",
+          "too-many-lines",
+          "import-error",
+          "broad-exception-caught",
+          "possibly-used-before-assignment",
+          "unbalanced-tuple-unpacking"
+          ]
+[tool.black]
+target-version = ["py312"]
+skip-string-normalization = true
+line-length = 100
+
+[project]
+name = "mlops-zoomcamp"
+version = "1.00"
+authors = [
+  { name="Xabarov Roman", email="xabarov1985@gmail.com" },
+]
+description = "My homework for MLOps course"
+readme = "README.md"
+license = { file="LICENSE" }
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "xgboost",
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "scipy",
+  "tqdm",
+  "pyyaml",
+  "fastapi"
+]
+[project.urls]
+"Homepage" = "https://github.com/xabarov/mlops-zoomcamp"
