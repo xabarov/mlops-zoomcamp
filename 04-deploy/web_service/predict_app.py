@@ -5,7 +5,6 @@ Predict taxi fares using a trained XGBoost model
 import logging
 from contextlib import asynccontextmanager
 
-import uvicorn
 import xgboost as xgb
 from fastapi import FastAPI, HTTPException
 from loaders import load_model, load_preprocessor
@@ -117,7 +116,3 @@ async def health_check() -> HealthResponse:
         return HealthResponse(status="healthy", models_loaded=True)
     except Exception as e:
         return HealthResponse(status="unhealthy", models_loaded=False, error=str(e))
-
-
-if __name__ == "__main__":
-    uvicorn.run("predict_app:app", host="0.0.0.0", port=8000, reload=True, log_level="info")

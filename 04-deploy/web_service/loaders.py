@@ -17,8 +17,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Configuration
-mlflow.set_tracking_uri(TRACKING_URI)
-mlflow.set_experiment(EXPERIMENT_NAME)
+# Read from env variable
+IS_MLFLOW = os.getenv("IS_MLFLOW", "False").lower() == "true"
+
+if IS_MLFLOW:
+    mlflow.set_tracking_uri(TRACKING_URI)
+    mlflow.set_experiment(EXPERIMENT_NAME)
 
 
 @lru_cache(maxsize=1)
@@ -29,9 +33,26 @@ def load_model():
     model_name = "xgboost_model"
     model_version = "latest"
 
-    model_uri = f"models:/{model_name}/{model_version}"
-    model = mlflow.xgboost.load_model(model_uri)
-    logger.info("Model loaded successfully from %s", model_uri)
+    cur_dir = os.path.dirname(os.path.abspath(__file__))
+    if not os.path.exists(f'{cur_dir}/model'):
+        os.makedirs(f'{cur_dir}/model')
+
+    model_path = f'{cur_dir}/model/model.b'
+
+    if not os.path.exists(model_path):
+        if IS_MLFLOW:
+            model_uri = f"models:/{model_name}/{model_version}"
+            model = mlflow.xgboost.load_model(model_uri)
+            logger.info("Model loaded successfully from %s", model_uri)
+            with open(model_path, 'wb') as f:
+                pickle.dump(model, f)
+        else:
+            # raise exception
+            raise Exception("Model not found")
+
+    else:
+        with open(model_path, 'rb') as f:
+            model = pickle.load(f)
 
     return model
 
@@ -43,12 +64,22 @@ def load_preprocessor():
     """
 
     cur_dir = os.path.dirname(os.path.abspath(__file__))
+
+    if not os.path.exists(f'{cur_dir}/preprocessor'):
+        os.makedirs(f'{cur_dir}/preprocessor')
+
     preprocessor_path = f'{cur_dir}/preprocessor/preprocessor.b'
 
-    # Download only if not exists
-    mlflow.artifacts.download_artifacts(
-        artifact_uri=f'mlflow-artifacts:/1/{RUN_ID}/artifacts/preprocessor', dst_path=cur_dir
-    )
+    if not os.path.exists(preprocessor_path):
+
+        # Download only if not exists
+        if IS_MLFLOW:
+            mlflow.artifacts.download_artifacts(
+                artifact_uri=f'mlflow-artifacts:/1/{RUN_ID}/artifacts/preprocessor',
+                dst_path=cur_dir,
+            )
+        else:
+            raise Exception("Preprocessor not found")
 
     with open(preprocessor_path, 'rb') as f:
         preprocessor = pickle.load(f)

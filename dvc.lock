@@ -1,48 +1,47 @@
 schema: '2.0'
 stages:
   feature_engineering:
-    cmd: python3 featurize.py --dataset_path 
-      data/yellow_tripdata_2025-01_sample.parquet --duration_minutes_min 1 
-      --duration_minutes_max 60 --features_path features.yaml --save_path 
-      nyc/processed/yellow_tripdata_processed.parquet
+    cmd: python3 featurize.py --dataset_path data/yellow_tripdata_sample.parquet
+      --duration_minutes_min 1 --duration_minutes_max 60 --features_path
+      features.yaml --save_path nyc/processed/yellow_tripdata_processed.parquet
     deps:
-    - path: data/yellow_tripdata_2025-01_sample.parquet
+    - path: data/yellow_tripdata_sample.parquet
       hash: md5
-      md5: d8795d6df54f725ce73739f49413573e
-      size: 10120209
+      md5: ffa0362e6be54aca5153770188b424d9
+      size: 10149012
     - path: features.yaml
       hash: md5
       md5: 2bccff1d49b45fdc739c3091d42390eb
       size: 174
     - path: featurize.py
       hash: md5
-      md5: fa8771648df7228a87ab1c76e6695c42
-      size: 2930
+      md5: d6165b328aa5474cffb6c4ea79c6e6f2
+      size: 2805
     params:
       params.yaml:
         dataset.features_path: features.yaml
-        dataset.path: data/yellow_tripdata_2025-01_sample.parquet
+        dataset.path: data/yellow_tripdata_sample.parquet
         feature_engineering.duration_minutes.max: 60
         feature_engineering.duration_minutes.min: 1
-        feature_engineering.save_path: 
+        feature_engineering.save_path:
           nyc/processed/yellow_tripdata_processed.parquet
     outs:
     - path: nyc/processed/yellow_tripdata_processed.parquet
       hash: md5
-      md5: a2058a21e843ba17b5ce4e176878b721
-      size: 2855983
+      md5: 7df1f47260af28af44e519f97ab23d05
+      size: 2855908
   split_data:
-    cmd: python3 split.py --val_portion 0.1 --test_portion 0.1 --save_path 
+    cmd: python3 split.py --val_portion 0.1 --test_portion 0.1 --save_path
       nyc/split
     deps:
     - path: nyc/processed/yellow_tripdata_processed.parquet
       hash: md5
-      md5: a2058a21e843ba17b5ce4e176878b721
-      size: 2855983
+      md5: 7df1f47260af28af44e519f97ab23d05
+      size: 2855908
     - path: split.py
       hash: md5
-      md5: 39576be93289a6c49449ba0fe5515920
-      size: 1625
+      md5: 39084a51512687de194b1683e559be12
+      size: 1574
     params:
       params.yaml:
         split.save_path: nyc/split
@@ -51,18 +50,18 @@ stages:
     outs:
     - path: nyc/split/test.parquet
       hash: md5
-      md5: bf7b488eb788b374eec1ed3725b514e1
-      size: 75615
+      md5: 67738bb93675332fabae0ed2f2d887e5
+      size: 75647
     - path: nyc/split/train.parquet
       hash: md5
-      md5: b15983ce7ea54ae9fd6e583d9c17c1c4
-      size: 2346263
+      md5: 398318e7afbfbdbeaebbc21ed94d9ad6
+      size: 2348080
     - path: nyc/split/val.parquet
       hash: md5
-      md5: 7eda021234d8bc2563ecd9d8327914e9
-      size: 583836
+      md5: ef696dd0993fab5789dea40337c5e196
+      size: 577640
   transform_data:
-    cmd: python3 transform.py --features_path features.yaml  --save_path 
+    cmd: python3 transform.py --features_path features.yaml  --save_path
       nyc/xgb_matrices
     deps:
     - path: features.yaml
@@ -71,20 +70,20 @@ stages:
       size: 174
     - path: nyc/split/test.parquet
       hash: md5
-      md5: bf7b488eb788b374eec1ed3725b514e1
-      size: 75615
+      md5: 67738bb93675332fabae0ed2f2d887e5
+      size: 75647
     - path: nyc/split/train.parquet
       hash: md5
-      md5: b15983ce7ea54ae9fd6e583d9c17c1c4
-      size: 2346263
+      md5: 398318e7afbfbdbeaebbc21ed94d9ad6
+      size: 2348080
     - path: nyc/split/val.parquet
       hash: md5
-      md5: 7eda021234d8bc2563ecd9d8327914e9
-      size: 583836
+      md5: ef696dd0993fab5789dea40337c5e196
+      size: 577640
     - path: transform.py
       hash: md5
-      md5: ac74caa960173d2347032310550dedb7
-      size: 2725
+      md5: b0583ee6525918dd4f130e5ad5bb7f97
+      size: 2731
     params:
       params.yaml:
         dataset.features_path: features.yaml
@@ -92,24 +91,24 @@ stages:
     outs:
     - path: nyc/xgb_matrices
       hash: md5
-      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      md5: c8525369aaf9138b92d83d300511e22d.dir
       size: 75590688
       nfiles: 6
   search_best_params:
-    cmd: python3 search_best_params.py --search_space_params_path 
-      search_space_params.yaml --xgb_matrices_path nyc/xgb_matrices 
-      --num_boost_round 100 --early_stopping_rounds 20 --save_path 
+    cmd: python3 search_best_params.py --search_space_params_path
+      search_space_params.yaml --xgb_matrices_path nyc/xgb_matrices
+      --num_boost_round 100 --early_stopping_rounds 20 --save_path
       nyc/best_train_params.yaml
     deps:
     - path: nyc/xgb_matrices
       hash: md5
-      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      md5: c8525369aaf9138b92d83d300511e22d.dir
       size: 75590688
       nfiles: 6
     - path: search_best_params.py
       hash: md5
-      md5: bf0407b475e2fa7629868877f18e5958
-      size: 5052
+      md5: b05a28840dcb9a7835f5c4e981fc30f4
+      size: 5212
     - path: search_space_params.yaml
       hash: md5
       md5: a094d48f8831aecc19fb8d0cd32a7dfc
@@ -124,11 +123,11 @@ stages:
     outs:
     - path: nyc/best_train_params.yaml
       hash: md5
-      md5: 4cfcbd98c2a96d06af45559a87a25ed5
-      size: 152
+      md5: a4d7a4930e072518bffcf3e95b326244
+      size: 150
   train:
-    cmd: python3 train.py --best_params_path nyc/best_train_params.yaml 
-      --xgb_matrices_path nyc/xgb_matrices --num_boost_round 100 
+    cmd: python3 train.py --best_params_path nyc/best_train_params.yaml
+      --xgb_matrices_path nyc/xgb_matrices --num_boost_round 100
       --early_stopping_rounds 20 --features_path features.yaml --save_model_path
       nyc/models/model.json
     deps:
@@ -138,17 +137,17 @@ stages:
       size: 174
     - path: nyc/best_train_params.yaml
       hash: md5
-      md5: 4cfcbd98c2a96d06af45559a87a25ed5
-      size: 152
+      md5: a4d7a4930e072518bffcf3e95b326244
+      size: 150
     - path: nyc/xgb_matrices
       hash: md5
-      md5: 8c80bfe84183b8825e2e66d8ab908c52.dir
+      md5: c8525369aaf9138b92d83d300511e22d.dir
       size: 75590688
       nfiles: 6
     - path: train.py
       hash: md5
-      md5: 89bd80c5fa6bf7faa7608cbb26931dc3
-      size: 5763
+      md5: 0a42ff7d1ded24edf2a59a22e66d6157
+      size: 5594
     params:
       params.yaml:
         dataset.features_path: features.yaml

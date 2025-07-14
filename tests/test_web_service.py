@@ -277,7 +277,7 @@ def main():
         print("✅ Server is running\n")
     except requests.exceptions.RequestException:
         print("❌ Server is not running. Please start the FastAPI server first.")
-        print("Run: python predict.py")
+        print("Run: python predict_app.py")
         return
 
     # Run all tests

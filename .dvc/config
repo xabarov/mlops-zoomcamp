@@ -1,0 +1,4 @@
+[core]
+    remote = mystore
+['remote "mystore"']
+    url = /home/roman/dvcstore/

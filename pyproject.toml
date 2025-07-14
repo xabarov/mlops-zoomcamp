@@ -16,7 +16,8 @@ disable = ["invalid-name",
           "import-error",
           "broad-exception-caught",
           "possibly-used-before-assignment",
-          "unbalanced-tuple-unpacking"
+          "unbalanced-tuple-unpacking",
+          "broad-exception-raised"
           ]
 [tool.black]
 target-version = ["py312"]
